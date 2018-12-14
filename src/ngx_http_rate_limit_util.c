@@ -73,9 +73,15 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
 {
     size_t                           len, arg_len;
     u_char                          *p;
+    ngx_http_rate_limit_ctx_t       *ctx;
     ngx_http_rate_limit_loc_conf_t  *rlcf;
 
     rlcf = ngx_http_get_module_loc_conf(r, ngx_http_rate_limit_module);
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_rate_limit_module);
+    if (ctx == NULL) {
+        return NGX_ERROR;
+    }
 
     /* Accumulate buffer size. */
     len = 0;
@@ -94,11 +100,11 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     len += sizeof("RATER.LIMIT") - 1;
     len += sizeof("\r\n") - 1;
 
-    /* <key> = IP-address */
+    /* <key> */
     len += sizeof("$") - 1;
-    len += ngx_get_num_size(r->connection->addr_text.len);
+    len += ngx_get_num_size(ctx->key.len);
     len += sizeof("\r\n") - 1;
-    len += r->connection->addr_text.len;
+    len += ctx->key.len;
     len += sizeof("\r\n") - 1;
 
     /* <max_burst> */
@@ -126,7 +132,7 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     len += sizeof("\r\n") - 1;
 
     /* [<quantity>] */
-    if (rlcf->quantity > 1) {
+    if (rlcf->quantity != 1) {
         arg_len = ngx_get_num_size(rlcf->quantity);
         len += sizeof("$") - 1;
         len += ngx_get_num_size(arg_len);
@@ -143,7 +149,7 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     p = (*b)->last;
 
     *p++ = '*';
-    *p++ = rlcf->quantity > 1 ? '6' : '5';
+    *p++ = rlcf->quantity != 1 ? '6' : '5';
     *p++ = '\r'; *p++ = '\n';
 
     *p++ = '$';
@@ -153,9 +159,9 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     *p++ = '\r'; *p++ = '\n';
 
     *p++ = '$';
-    p = ngx_sprintf(p, "%uz", r->connection->addr_text.len);
+    p = ngx_sprintf(p, "%uz", ctx->key.len);
     *p++ = '\r'; *p++ = '\n';
-    p = ngx_copy(p, r->connection->addr_text.data, r->connection->addr_text.len);
+    p = ngx_copy(p, ctx->key.data, ctx->key.len);
     *p++ = '\r'; *p++ = '\n';
 
     *p++ = '$';
@@ -176,7 +182,7 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     p = ngx_sprintf(p, "%d", rlcf->period);
     *p++ = '\r'; *p++ = '\n';
 
-    if (rlcf->quantity > 1) {
+    if (rlcf->quantity != 1) {
         *p++ = '$';
         p = ngx_sprintf(p, "%uz", ngx_get_num_size(rlcf->quantity));
         *p++ = '\r'; *p++ = '\n';
@@ -209,7 +215,9 @@ ngx_set_custom_header(ngx_http_request_t *r, ngx_str_t *key, ngx_str_t *value) {
 
     h->key = *key;
     h->value = *value;
-    h->hash = ngx_hash_key_lc(h->key.data, h->key.len);
+
+    /* Mark the header as not deleted. */
+    h->hash = 1;
 
     h->lowcase_key = ngx_pnalloc(r->pool, h->key.len);
     if (h->lowcase_key == NULL) {

@@ -24,9 +24,35 @@ upstream redis {
    keepalive 1024;
 }
 
+geo $limit {
+    default 1;
+    10.0.0.0/8 0;
+    192.168.0.0/24 0;
+}
+
+map $limit $limit_key {
+    0 "";
+    1 $remote_addr;
+}
+
+rate_limit_status 429;
+
 location = /limit {
-    rate_limit rate=15r/s burst=20;
+    rate_limit $limit_key rate=15r/m burst=20;
     rate_limit_pass redis;
+}
+
+location = /limit_b {
+    rate_limit $limit_key rate=20r/m burst=25;
+    rate_limit_prefix b;
+    rate_limit_pass redis;
+}
+
+location = /quota {
+    rate_limit $limit_key rate=15r/m burst=20;
+    rate_limit_quantity 0;
+    rate_limit_pass redis;
+    rate_limit_headers on;
 }
 ```
 

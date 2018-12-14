@@ -1,3 +1,4 @@
+### C ###
 # Prerequisites
 *.d
 
@@ -25,3 +26,6 @@
 # Shared objects
 *.so
 *.so.*
+
+### IntelliJ ###
+.idea/
