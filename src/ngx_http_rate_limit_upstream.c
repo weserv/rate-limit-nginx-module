@@ -96,8 +96,8 @@ ngx_http_rate_limit_finalize_upstream_request(ngx_http_request_t *r,
 static ngx_int_t
 ngx_http_rate_limit_test_connect(ngx_connection_t *c)
 {
-    int        err;
-    socklen_t  len;
+    int       err;
+    socklen_t len;
 
 #if (NGX_HAVE_KQUEUE)
 
@@ -127,9 +127,7 @@ ngx_http_rate_limit_test_connect(ngx_connection_t *c)
          * Solaris returns -1 and sets errno
          */
 
-        if (getsockopt(c->fd, SOL_SOCKET, SO_ERROR, (void *) &err, &len)
-            == -1)
-        {
+        if (getsockopt(c->fd, SOL_SOCKET, SO_ERROR, (void *) &err, &len) == -1) {
             err = ngx_socket_errno;
         }
 
@@ -148,9 +146,9 @@ ngx_http_rate_limit_test_connect(ngx_connection_t *c)
 void
 ngx_http_rate_limit_rev_handler(ngx_http_request_t *r, ngx_http_upstream_t *u)
 {
-    ssize_t            n;
-    ngx_int_t          rc;
-    ngx_connection_t  *c;
+    ssize_t          n;
+    ngx_int_t        rc;
+    ngx_connection_t *c;
 
     c = u->peer.connection;
 

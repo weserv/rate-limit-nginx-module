@@ -9,4 +9,3 @@ void ngx_http_rate_limit_rev_handler(ngx_http_request_t *r, ngx_http_upstream_t 
 
 
 #endif /* NGX_HTTP_RATE_LIMIT_UPSTREAM_H */
-
