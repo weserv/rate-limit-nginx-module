@@ -45,6 +45,9 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
         /* Return appropriate status */
 
         if (ctx->status == NGX_HTTP_TOO_MANY_REQUESTS) {
+            ngx_log_error(rlcf->limit_log_level, r->connection->log, 0,
+                          "rate limit exceeded for key \"%V\"", &ctx->key);
+
             return rlcf->status_code;
         }
 
@@ -234,8 +237,7 @@ ngx_http_rate_limit_process_header(ngx_http_request_t *r)
     lnum = 0;
 
     for (line = b->pos; (crnl = (u_char *) ngx_strstr(line, "\r\n")) != NULL; line = crnl + 2) {
-        ++lnum;
-        if (lnum == 1) {
+        if (++lnum == 1) {
             /* the first char is the response header
              * the second char is number of return args */
             if (*line != '*' && *(line + 1) != '5') {
@@ -243,7 +245,7 @@ ngx_http_rate_limit_process_header(ngx_http_request_t *r)
                 buf.len = b->last - b->pos;
 
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                              "rate limit: redis sent invalid response: \"%V\"", &buf);
+                              "rate limit: redis sent invalid header: \"%V\"", &buf);
 
                 return NGX_HTTP_UPSTREAM_INVALID_HEADER;
             }

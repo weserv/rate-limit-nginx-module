@@ -11,6 +11,13 @@ static char *ngx_http_rate_limit(ngx_conf_t *cf, ngx_command_t *cmd,
 static char *ngx_http_rate_limit_pass(ngx_conf_t *cf, ngx_command_t *cmd,
                                       void *conf);
 
+static ngx_conf_enum_t ngx_http_rate_limit_log_levels[] = {
+        { ngx_string("info"), NGX_LOG_INFO },
+        { ngx_string("notice"), NGX_LOG_NOTICE },
+        { ngx_string("warn"), NGX_LOG_WARN },
+        { ngx_string("error"), NGX_LOG_ERR },
+        { ngx_null_string, 0 }
+};
 
 static ngx_conf_num_bounds_t ngx_http_rate_limit_status_bounds = {
         ngx_conf_check_num_bounds, 400, 599
@@ -53,6 +60,13 @@ static ngx_command_t ngx_http_rate_limit_commands[] = {
           NGX_HTTP_LOC_CONF_OFFSET,
           offsetof(ngx_http_rate_limit_loc_conf_t, enable_headers),
           NULL },
+
+        { ngx_string("rate_limit_log_level"),
+          NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+          ngx_conf_set_enum_slot,
+          NGX_HTTP_LOC_CONF_OFFSET,
+          offsetof(ngx_http_rate_limit_loc_conf_t, limit_log_level),
+          &ngx_http_rate_limit_log_levels },
 
         { ngx_string("rate_limit_status"),
           NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
@@ -168,6 +182,7 @@ ngx_http_rate_limit_create_loc_conf(ngx_conf_t *cf)
 
     conf->enable_headers = NGX_CONF_UNSET;
     conf->status_code = NGX_CONF_UNSET_UINT;
+    conf->limit_log_level = NGX_CONF_UNSET_UINT;
 
     conf->quantity = NGX_CONF_UNSET_UINT;
 
@@ -201,6 +216,8 @@ ngx_http_rate_limit_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->enable_headers, prev->enable_headers, 0);
     ngx_conf_merge_uint_value(conf->status_code, prev->status_code,
                               NGX_HTTP_TOO_MANY_REQUESTS);
+    ngx_conf_merge_uint_value(conf->limit_log_level, prev->limit_log_level,
+                              NGX_LOG_ERR);
 
     ngx_conf_merge_str_value(conf->prefix, prev->prefix, "");
     ngx_conf_merge_uint_value(conf->quantity, prev->quantity, 1);
