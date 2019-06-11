@@ -1,0 +1,23 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 80
+AlignConsecutiveDeclarations: true
+AlwaysBreakAfterReturnType: AllDefinitions
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass:      false
+  AfterControlStatement: false
+  AfterEnum:       false
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  BeforeCatch:     false
+  BeforeElse:      false
+  IndentBraces:    false
+Cpp11BracedListStyle: false
+PointerAlignment: Right
+SpaceAfterCStyleCast: true
+...

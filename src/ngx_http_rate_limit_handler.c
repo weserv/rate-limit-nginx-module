@@ -1,4 +1,5 @@
 #include "ngx_http_rate_limit_handler.h"
+#include "ngx_http_rate_limit_reply.h"
 #include "ngx_http_rate_limit_upstream.h"
 #include "ngx_http_rate_limit_util.h"
 
@@ -11,12 +12,10 @@ static void ngx_http_rate_limit_abort_request(ngx_http_request_t *r);
 static void ngx_http_rate_limit_finalize_request(ngx_http_request_t *r,
                                                  ngx_int_t rc);
 
-
 static ngx_str_t x_limit_header = ngx_string("X-RateLimit-Limit");
 static ngx_str_t x_remaining_header = ngx_string("X-RateLimit-Remaining");
 static ngx_str_t x_reset_header = ngx_string("X-RateLimit-Reset");
 static ngx_str_t x_retry_after_header = ngx_string("Retry-After");
-
 
 ngx_int_t
 ngx_http_rate_limit_handler(ngx_http_request_t *r)
@@ -24,10 +23,11 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
     ngx_http_upstream_t            *u;
     ngx_http_rate_limit_ctx_t      *ctx;
     ngx_http_rate_limit_loc_conf_t *rlcf;
-    size_t                         len;
+    size_t                          len;
     u_char                         *p, *n;
-    ngx_str_t                      target;
-    ngx_url_t                      url;
+    ngx_uint_t                      status;
+    ngx_str_t                       target;
+    ngx_url_t                       url;
 
     rlcf = ngx_http_get_module_loc_conf(r, ngx_http_rate_limit_module);
 
@@ -42,22 +42,23 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
             return NGX_AGAIN;
         }
 
+        status = r->upstream->state->status;
+
         /* Return appropriate status */
 
-        if (ctx->status == NGX_HTTP_TOO_MANY_REQUESTS) {
+        if (status == NGX_HTTP_TOO_MANY_REQUESTS) {
             ngx_log_error(rlcf->limit_log_level, r->connection->log, 0,
                           "rate limit exceeded for key \"%V\"", &ctx->key);
 
             return rlcf->status_code;
         }
 
-        if (ctx->status >= NGX_HTTP_OK
-            && ctx->status < NGX_HTTP_SPECIAL_RESPONSE) {
+        if (status == NGX_HTTP_OK) {
             return NGX_OK;
         }
 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                      "rate limit unexpected status: %ui", ctx->status);
+                      "rate limit unexpected status: %ui", status);
 
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -99,6 +100,8 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    ctx->request = r;
+
     if (ngx_http_upstream_create(r) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -108,7 +111,8 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
     if (rlcf->complex_target) {
         /* Variables used in the rate_limit_pass directive */
 
-        if (ngx_http_complex_value(r, rlcf->complex_target, &target) != NGX_OK) {
+        if (ngx_http_complex_value(r, rlcf->complex_target, &target) !=
+            NGX_OK) {
             return NGX_ERROR;
         }
 
@@ -145,12 +149,9 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
 
     ngx_http_set_ctx(r, ctx, ngx_http_rate_limit_module);
 
-    /* We bypass the upstream input filter mechanism in
-     * ngx_http_rate_limit_rev_handler */
-
     u->input_filter_init = ngx_http_rate_limit_filter_init;
     u->input_filter = ngx_http_rate_limit_filter;
-    u->input_filter_ctx = r;
+    u->input_filter_ctx = ctx;
 
     r->main->count++;
 
@@ -163,11 +164,10 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
     return NGX_AGAIN;
 }
 
-
 static ngx_int_t
 ngx_http_rate_limit_create_request(ngx_http_request_t *r)
 {
-    ngx_int_t   rc;
+    ngx_int_t    rc;
     ngx_buf_t   *b;
     ngx_chain_t *cl;
 
@@ -194,7 +194,6 @@ ngx_http_rate_limit_create_request(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
 static ngx_int_t
 ngx_http_rate_limit_reinit_request(ngx_http_request_t *r)
 {
@@ -208,17 +207,14 @@ ngx_http_rate_limit_reinit_request(ngx_http_request_t *r)
     return NGX_OK;
 }
 
-
 static ngx_int_t
 ngx_http_rate_limit_process_header(ngx_http_request_t *r)
 {
-    ngx_http_upstream_t            *u;
-    ngx_http_rate_limit_ctx_t      *ctx;
-    ngx_http_rate_limit_loc_conf_t *rlcf;
-    ngx_buf_t                      *b;
-    ngx_str_t                      buf;
-    u_char                         *line, *crnl, *arg;
-    ngx_uint_t                     lnum;
+    ngx_http_upstream_t       *u;
+    ngx_http_rate_limit_ctx_t *ctx;
+    ngx_buf_t                 *b;
+    u_char                     chr;
+    ngx_str_t                  buf;
 
     u = r->upstream;
     b = &u->buffer;
@@ -232,113 +228,40 @@ ngx_http_rate_limit_process_header(ngx_http_request_t *r)
         return NGX_ERROR;
     }
 
-    rlcf = ngx_http_get_module_loc_conf(r, ngx_http_rate_limit_module);
+    /* the first char is the response header */
+    chr = *b->pos;
 
-    lnum = 0;
+    /* we are always expecting a multi bulk reply */
+    if (chr != '*') {
+        buf.data = b->pos;
+        buf.len = b->last - b->pos;
 
-    for (line = b->pos; (crnl = (u_char *) ngx_strstr(line, "\r\n")) != NULL; line = crnl + 2) {
-        if (++lnum == 1) {
-            /* the first char is the response header
-             * the second char is number of return args */
-            if (*line != '*' && *(line + 1) != '5') {
-                buf.data = b->pos;
-                buf.len = b->last - b->pos;
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "rate limit: redis sent invalid response: \"%V\"", &buf);
 
-                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                              "rate limit: redis sent invalid header: \"%V\"", &buf);
-
-                return NGX_HTTP_UPSTREAM_INVALID_HEADER;
-            }
-
-            continue;
-        }
-        if ((arg = (u_char *) ngx_strchr(line, ':')) == NULL || ++arg > crnl) {
-            /* does not start with colon? */
-
-            buf.data = b->pos;
-            buf.len = b->last - b->pos;
-
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "rate limit: redis sent invalid response: \"%V\"", &buf);
-
-            return NGX_HTTP_UPSTREAM_INVALID_HEADER;
-        }
-
-        if (lnum == 2) {
-            /* 0 indicates the action is allowed
-             * 1 indicates that the action was limited/blocked */
-            if (*arg == '0') {
-                ctx->status = NGX_HTTP_OK;
-            } else {
-                ctx->status = NGX_HTTP_TOO_MANY_REQUESTS;
-            }
-        } else if (ctx->status == NGX_HTTP_TOO_MANY_REQUESTS || rlcf->enable_headers) {
-            buf.data = arg;
-            buf.len = crnl - arg;
-
-            switch (lnum) {
-                case 3:
-                    /* X-RateLimit-Limit HTTP header */
-                    (void) ngx_set_custom_header(r, &x_limit_header, &buf);
-                    break;
-                case 4:
-                    /* X-RateLimit-Remaining HTTP header */
-                    (void) ngx_set_custom_header(r, &x_remaining_header, &buf);
-                    break;
-                case 5:
-                    /* The number of seconds until the user should retry,
-                     * and always -1 if the action was allowed. */
-                    if (*arg != '-') {
-                        (void) ngx_set_custom_header(r, &x_retry_after_header, &buf);
-                    }
-                    break;
-                case 6:
-                    /* X-RateLimit-Reset header */
-                    (void) ngx_set_custom_header(r, &x_reset_header, &buf);
-                    break;
-                default:
-                    buf.data = arg;
-                    buf.len = b->last - arg;
-
-                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                                  "rate limit: redis sent extra bytes: \"%V\"", &buf);
-
-                    return NGX_HTTP_UPSTREAM_INVALID_HEADER;
-            }
-        }
+        return NGX_HTTP_UPSTREAM_INVALID_HEADER;
     }
+
+    ++b->pos;
 
     u->state->status = NGX_HTTP_OK;
 
     return NGX_OK;
 }
 
-
 static ngx_int_t
 ngx_http_rate_limit_filter_init(void *data)
 {
-    ngx_http_request_t *r = data;
-
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                  "rate_limit: ngx_http_rate_limit_filter_init should not"
-                  " be called by the upstream");
-
-    return NGX_ERROR;
+    return NGX_OK;
 }
-
 
 static ngx_int_t
 ngx_http_rate_limit_filter(void *data, ssize_t bytes)
 {
-    ngx_http_request_t *r = data;
+    ngx_http_rate_limit_ctx_t *ctx = data;
 
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                  "rate_limit: ngx_http_rate_limit_filter should not"
-                  " be called by the upstream");
-
-    return NGX_ERROR;
+    return ngx_http_rate_limit_process_reply(ctx, bytes);
 }
-
 
 static void
 ngx_http_rate_limit_abort_request(ngx_http_request_t *r)
@@ -348,23 +271,38 @@ ngx_http_rate_limit_abort_request(ngx_http_request_t *r)
     return;
 }
 
-
 static void
 ngx_http_rate_limit_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 {
-    ngx_http_rate_limit_ctx_t *ctx;
+    ngx_http_rate_limit_ctx_t      *ctx;
+    ngx_http_rate_limit_loc_conf_t *rlcf;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "finalize http rate limit request");
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_rate_limit_module);
+
+    rlcf = ngx_http_get_module_loc_conf(r, ngx_http_rate_limit_module);
+
+    if (r->upstream->state->status == NGX_HTTP_TOO_MANY_REQUESTS ||
+        rlcf->enable_headers) {
+        /* X-RateLimit-Limit HTTP header */
+        (void) ngx_set_custom_header(r, &x_limit_header, ctx->limit);
+
+        /* X-RateLimit-Remaining HTTP header */
+        (void) ngx_set_custom_header(r, &x_remaining_header, ctx->remaining);
+
+        /* Retry-After */
+        if (r->upstream->state->status == NGX_HTTP_TOO_MANY_REQUESTS) {
+            (void) ngx_set_custom_header(r, &x_retry_after_header,
+                                         ctx->retry_after);
+        }
+
+        /* X-RateLimit-Reset */
+        (void) ngx_set_custom_header(r, &x_reset_header, ctx->reset);
+    }
+
     if (ctx != NULL) {
         ctx->done = 1;
     }
-
-    if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
-        r->headers_out.status = rc;
-    }
-
-    return;
 }

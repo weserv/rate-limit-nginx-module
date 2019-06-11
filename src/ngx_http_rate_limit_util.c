@@ -1,15 +1,13 @@
 #include "ngx_http_rate_limit_util.h"
 
-
 static size_t ngx_get_num_size(uint64_t i);
-
 
 ngx_http_upstream_srv_conf_t *
 ngx_http_rate_limit_upstream_add(ngx_http_request_t *r, ngx_url_t *url)
 {
     ngx_http_upstream_main_conf_t *umcf;
-    ngx_http_upstream_srv_conf_t  **uscfp;
-    ngx_uint_t                    i;
+    ngx_http_upstream_srv_conf_t **uscfp;
+    ngx_uint_t                     i;
 
     umcf = ngx_http_get_module_main_conf(r, ngx_http_upstream_module);
 
@@ -17,9 +15,9 @@ ngx_http_rate_limit_upstream_add(ngx_http_request_t *r, ngx_url_t *url)
 
     for (i = 0; i < umcf->upstreams.nelts; i++) {
 
-        if (uscfp[i]->host.len != url->host.len
-            || ngx_strncasecmp(uscfp[i]->host.data, url->host.data,
-                               url->host.len) != 0) {
+        if (uscfp[i]->host.len != url->host.len ||
+            ngx_strncasecmp(uscfp[i]->host.data, url->host.data,
+                            url->host.len) != 0) {
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                            "upstream_add: host not match");
             continue;
@@ -33,10 +31,8 @@ ngx_http_rate_limit_upstream_add(ngx_http_request_t *r, ngx_url_t *url)
         }
 
 #if defined(nginx_version) && nginx_version < 1011006
-        if (uscfp[i]->default_port
-            && url->default_port
-            && uscfp[i]->default_port != url->default_port)
-        {
+        if (uscfp[i]->default_port && url->default_port &&
+            uscfp[i]->default_port != url->default_port) {
             ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                            "upstream_add: default_port not match");
             continue;
@@ -52,7 +48,6 @@ ngx_http_rate_limit_upstream_add(ngx_http_request_t *r, ngx_url_t *url)
     return NULL;
 }
 
-
 static size_t
 ngx_get_num_size(uint64_t i)
 {
@@ -66,11 +61,10 @@ ngx_get_num_size(uint64_t i)
     return n;
 }
 
-
 ngx_int_t
 ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
 {
-    size_t                         len, arg_len;
+    size_t                          len, arg_len;
     u_char                         *p;
     ngx_http_rate_limit_ctx_t      *ctx;
     ngx_http_rate_limit_loc_conf_t *rlcf;
@@ -85,7 +79,9 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     /* Accumulate buffer size. */
     len = 0;
 
-    /* Example: "*5\r\n$11\r\nRATER.LIMIT\r\n$7\r\nuser123\r\n$2\r\n15\r\n$2\r\n30\r\n$2\r\n60\r\n" */
+    /* Example command:
+     * "*5\r\n$11\r\nRATER.LIMIT\r\n$7\r\nuser123\r\n$2\r\n15\r\n$2\r\n30\r\n$2\r\n60\r\n"
+     */
 
     /*The arity of the command */
     len += sizeof("*6") - 1;
@@ -115,7 +111,7 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     len += sizeof("\r\n") - 1;
 
     /* <count per period> */
-    arg_len = ngx_get_num_size(rlcf->rate);
+    arg_len = ngx_get_num_size(rlcf->requests);
     len += sizeof("$") - 1;
     len += ngx_get_num_size(arg_len);
     len += sizeof("\r\n") - 1;
@@ -178,10 +174,10 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     *p++ = '\n';
 
     *p++ = '$';
-    p = ngx_sprintf(p, "%uz", ngx_get_num_size(rlcf->rate));
+    p = ngx_sprintf(p, "%uz", ngx_get_num_size(rlcf->requests));
     *p++ = '\r';
     *p++ = '\n';
-    p = ngx_sprintf(p, "%d", rlcf->rate);
+    p = ngx_sprintf(p, "%d", rlcf->requests);
     *p++ = '\r';
     *p++ = '\n';
 
@@ -216,9 +212,8 @@ ngx_http_rate_limit_build_command(ngx_http_request_t *r, ngx_buf_t **b)
     return NGX_OK;
 }
 
-
 ngx_int_t
-ngx_set_custom_header(ngx_http_request_t *r, ngx_str_t *key, ngx_str_t *value)
+ngx_set_custom_header(ngx_http_request_t *r, ngx_str_t *key, ngx_uint_t value)
 {
     ngx_table_elt_t *h;
 
@@ -227,11 +222,17 @@ ngx_set_custom_header(ngx_http_request_t *r, ngx_str_t *key, ngx_str_t *value)
         return NGX_ERROR;
     }
 
-    h->key = *key;
-    h->value = *value;
-
     /* Mark the header as not deleted. */
     h->hash = 1;
+    h->key = *key;
+
+    h->value.data = ngx_pnalloc(r->pool, ngx_get_num_size(value));
+    if (h->value.data == NULL) {
+        h->hash = 0;
+        return NGX_ERROR;
+    }
+
+    h->value.len = ngx_sprintf(h->value.data, "%ui", value) - h->value.data;
 
     h->lowcase_key = ngx_pnalloc(r->pool, h->key.len);
     if (h->lowcase_key == NULL) {

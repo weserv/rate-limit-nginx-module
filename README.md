@@ -12,7 +12,7 @@ Which offers a straightforward implementation of the fairly sophisticated [gener
 
 ## Status
 
-This module is **NOT** production ready. See the [To-Do list](TODO.md) for things that needs to be done first.
+This module is still under early development but is already production ready.
 
 ## Synopsis
 
@@ -38,25 +38,23 @@ map $limit $limit_key {
 rate_limit_status 429;
 
 location = /limit {
-    rate_limit $limit_key rate=15r/m burst=20;
+    rate_limit $limit_key requests=15 period=1m burst=20;
     rate_limit_pass redis;
 }
 
 location = /limit_b {
-    rate_limit $limit_key rate=20r/m burst=25;
+    rate_limit $limit_key requests=20 period=1m burst=25;
     rate_limit_prefix b;
     rate_limit_pass redis;
 }
 
 location = /quota {
-    rate_limit $limit_key rate=15r/m burst=20;
+    rate_limit $limit_key requests=15 period=1m burst=20;
     rate_limit_quantity 0;
     rate_limit_pass redis;
     rate_limit_headers on;
 }
 ```
-
-*Do not rely on this, as this may change in the future.*
 
 ## Installation
 
