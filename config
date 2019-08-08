@@ -1,5 +1,3 @@
-ngx_addon_name=ngx_http_rate_limit_module
-
 if [ -z "$ngx_module_link" ]; then
 cat << END
 
@@ -9,25 +7,22 @@ END
     exit 1
 fi
 
-RATE_LIMIT_SRCS="                                                               \
-                $ngx_addon_dir/src/ngx_http_rate_limit_module.c                 \
-                $ngx_addon_dir/src/ngx_http_rate_limit_handler.c                \
-                $ngx_addon_dir/src/ngx_http_rate_limit_upstream.c               \
-                $ngx_addon_dir/src/ngx_http_rate_limit_reply.c                  \
-                $ngx_addon_dir/src/ngx_http_rate_limit_util.c                   \
-                "
-
-RATE_LIMIT_DEPS="                                                               \
-                $ngx_addon_dir/src/ngx_http_rate_limit_module.h                 \
-                $ngx_addon_dir/src/ngx_http_rate_limit_handler.h                \
-                $ngx_addon_dir/src/ngx_http_rate_limit_upstream.h               \
-                $ngx_addon_dir/src/ngx_http_rate_limit_reply.h                  \
-                $ngx_addon_dir/src/ngx_http_rate_limit_util.h                   \
-                "
-
+ngx_addon_name=ngx_http_rate_limit_module
 ngx_module_type=HTTP
 ngx_module_name=$ngx_addon_name
-ngx_module_srcs="$RATE_LIMIT_SRCS"
-ngx_module_deps="$RATE_LIMIT_DEPS"
+ngx_module_deps=" \
+  $ngx_addon_dir/src/ngx_http_rate_limit_module.h \
+  $ngx_addon_dir/src/ngx_http_rate_limit_handler.h \
+  $ngx_addon_dir/src/ngx_http_rate_limit_upstream.h \
+  $ngx_addon_dir/src/ngx_http_rate_limit_reply.h \
+  $ngx_addon_dir/src/ngx_http_rate_limit_util.h \
+"
+ngx_module_srcs=" \
+  $ngx_addon_dir/src/ngx_http_rate_limit_module.c \
+  $ngx_addon_dir/src/ngx_http_rate_limit_handler.c \
+  $ngx_addon_dir/src/ngx_http_rate_limit_upstream.c \
+  $ngx_addon_dir/src/ngx_http_rate_limit_reply.c \
+  $ngx_addon_dir/src/ngx_http_rate_limit_util.c \
+"
 
 . auto/module

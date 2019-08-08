@@ -29,3 +29,6 @@
 
 ### IntelliJ ###
 .idea/
+
+### Test::Nginx ###
+t/servroot/

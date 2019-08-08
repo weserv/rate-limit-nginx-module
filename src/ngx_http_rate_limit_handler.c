@@ -38,7 +38,7 @@ ngx_http_rate_limit_handler(ngx_http_request_t *r)
     ctx = ngx_http_get_module_ctx(r, ngx_http_rate_limit_module);
 
     if (ctx != NULL) {
-        if (!ctx->done) {
+        if (!ctx->finalized) {
             return NGX_AGAIN;
         }
 
@@ -281,6 +281,9 @@ ngx_http_rate_limit_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
                    "finalize http rate limit request");
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_rate_limit_module);
+    if (ctx == NULL) {
+        return;
+    }
 
     rlcf = ngx_http_get_module_loc_conf(r, ngx_http_rate_limit_module);
 
@@ -292,17 +295,15 @@ ngx_http_rate_limit_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
         /* X-RateLimit-Remaining HTTP header */
         (void) ngx_set_custom_header(r, &x_remaining_header, ctx->remaining);
 
-        /* Retry-After */
-        if (r->upstream->state->status == NGX_HTTP_TOO_MANY_REQUESTS) {
-            (void) ngx_set_custom_header(r, &x_retry_after_header,
-                                         ctx->retry_after);
-        }
-
         /* X-RateLimit-Reset */
         (void) ngx_set_custom_header(r, &x_reset_header, ctx->reset);
+
+        /* Retry-After (always -1 if the action was allowed) */
+        if (ctx->retry_after != -1) {
+            (void) ngx_set_custom_header(r, &x_retry_after_header,
+                                         (ngx_uint_t) ctx->retry_after);
+        }
     }
 
-    if (ctx != NULL) {
-        ctx->done = 1;
-    }
+    ctx->finalized = 1;
 }

@@ -20,6 +20,8 @@ This module is still under early development but is already production ready.
 upstream redis {
    server 127.0.0.1:6379;
 
+   # Or: server unix:/var/run/redis/redis.sock;
+
    # a pool with at most 1024 connections
    keepalive 1024;
 }
@@ -62,13 +64,13 @@ location = /quota {
 
 You can install this module manually by recompiling the standard Nginx core as follows:
 
-1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.16.0).
+1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.17.2).
 2. Clone this repository into a newly created directory (for e.g. `./rate-limit-nginx-module`)
 3. Build the nginx source with this module:
 ```bash
-wget https://nginx.org/download/nginx-1.16.0.tar.gz
-tar -xzvf nginx-1.16.0.tar.gz
-cd nginx-1.16.0/
+wget https://nginx.org/download/nginx-1.17.2.tar.gz
+tar -xzvf nginx-1.17.2.tar.gz
+cd nginx-1.17.2/
 
 git clone https://github.com/weserv/rate-limit-nginx-module rate-limit-nginx-module
 
@@ -79,3 +81,39 @@ git clone https://github.com/weserv/rate-limit-nginx-module rate-limit-nginx-mod
 make -j2
 make install
 ```
+
+## Test suite
+
+The following dependencies are required to run the test suite:
+
+* Nginx version >= 1.9.11
+
+* Perl modules:
+    * [Test::Nginx](https://metacpan.org/pod/Test::Nginx::Socket)
+
+* Nginx modules:
+	* ngx_http_rate_limit_module (i.e., this module)
+
+* Redis modules:
+    * [redis-rate-limiter](https://github.com/onsigntv/redis-rate-limiter)
+
+* Applications:
+	* redis: listening on the default port, 6379.
+
+To run the whole test suite in the default testing mode:
+```bash
+cd /path/to/rate-limit-nginx-module
+export PATH=/path/to/your/nginx/sbin:$PATH
+prove -I/path/to/test-nginx/lib -r t
+```
+
+To run specific test files:
+```bash
+cd /path/to/rate-limit-nginx-module
+export PATH=/path/to/your/nginx/sbin:$PATH
+prove -I/path/to/test-nginx/lib t/sanity.t
+```
+
+To run a specific test block in a particular test file, add the line 
+`--- ONLY` to the test block you want to run, and then use the `prove` 
+utility to run that `.t` file.

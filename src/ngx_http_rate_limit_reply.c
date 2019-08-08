@@ -20,6 +20,7 @@ ngx_http_rate_limit_process_reply(ngx_http_rate_limit_ctx_t *ctx, ssize_t bytes)
         sw_ARG3,
         sw_LF2,
         sw_ARG4,
+        sw_ALLOWED,
         sw_LF3,
         sw_ARG5,
         sw_almost_done
@@ -145,8 +146,6 @@ ngx_http_rate_limit_process_reply(ngx_http_rate_limit_ctx_t *ctx, ssize_t bytes)
 
         case sw_LF2:
             switch (ch) {
-            case CR:
-                break;
             case LF:
                 state = sw_ARG4;
                 break;
@@ -162,15 +161,13 @@ ngx_http_rate_limit_process_reply(ngx_http_rate_limit_ctx_t *ctx, ssize_t bytes)
                 break;
             }
 
-            if (ch == CR) {
-                state = sw_LF3;
+            if (ch == '-') {
+                state = sw_ALLOWED;
                 break;
             }
 
-            if (u->state->status == NGX_HTTP_OK) {
-                if (ch != '-' && ch != '1') {
-                    return NGX_ERROR;
-                }
+            if (ch == CR) {
+                state = sw_LF3;
                 break;
             }
 
@@ -180,6 +177,19 @@ ngx_http_rate_limit_process_reply(ngx_http_rate_limit_ctx_t *ctx, ssize_t bytes)
 
             ctx->retry_after = ctx->retry_after * 10 + (ch - '0');
 
+            break;
+
+        case sw_ALLOWED:
+            switch (ch) {
+            case '1':
+                ctx->retry_after = -1;
+                break;
+            case CR:
+                state = sw_LF3;
+                break;
+            default:
+                return NGX_ERROR;
+            }
             break;
 
         case sw_LF3:
@@ -221,7 +231,7 @@ ngx_http_rate_limit_process_reply(ngx_http_rate_limit_ctx_t *ctx, ssize_t bytes)
             }
         }
     }
-    
+
     b->pos = p;
     ctx->state = state;
 

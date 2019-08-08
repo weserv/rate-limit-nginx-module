@@ -23,13 +23,17 @@ ngx_http_rate_limit_finalize_upstream_request(ngx_http_request_t *r,
         u->resolved->ctx = NULL;
     }
 
-    if (u->state && u->state->response_time) {
-        u->state->response_time = ngx_current_msec - u->state->response_time;
+    if (u->state && u->state->response_time == (ngx_msec_t) -1) {
+        u->state->response_time = ngx_current_msec - u->start_time;
 
         if (u->pipe && u->pipe->read_length) {
             u->state->bytes_received +=
                 u->pipe->read_length - u->pipe->preread_size;
             u->state->response_length = u->pipe->read_length;
+        }
+
+        if (u->peer.connection) {
+            u->state->bytes_sent = u->peer.connection->sent;
         }
     }
 

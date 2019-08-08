@@ -29,13 +29,18 @@ typedef struct {
     ngx_str_t key;
 
     ngx_http_request_t *request;
-    int                 state;
-    ngx_flag_t          done;
 
+    /* used to parse the redis response */
+    ngx_uint_t state;
+
+    /* flag indicating whether the rate limit has been finalized */
+    ngx_flag_t finalized;
+
+    /* parsed variables from the redis response */
     ngx_uint_t limit;
     ngx_uint_t remaining;
-    ngx_uint_t retry_after;
     ngx_uint_t reset;
+    ngx_int_t  retry_after;
 } ngx_http_rate_limit_ctx_t;
 
 #endif /* NGX_HTTP_RATE_LIMIT_MODULE_H */

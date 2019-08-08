@@ -1,0 +1,39 @@
+language: c
+dist: xenial
+
+services:
+  - redis-server
+
+env:
+  global:
+    - NGINX_VERSION=1.17.2
+    - JOBS=`nproc`
+    - PATH=$HOME/nginx/sbin:$PATH
+
+cache:
+  directories:
+    - $HOME/nginx
+
+addons:
+  apt:
+    update: true
+    sources:
+      # for Test::Nginx
+      - sourceline: 'deb http://openresty.org/package/ubuntu $(lsb_release -cs) main'
+        key_url: 'https://openresty.org/package/pubkey.gpg'
+    packages:
+      - libtest-nginx-perl
+
+install:
+  - |
+    bash ci/install-nginx.sh \
+      --skip-cache \
+      --add-module=$TRAVIS_BUILD_DIR/
+  - bash ci/install-rate-limiter.sh
+
+before_script:
+  - sudo sed -i "s|# loadmodule /path/to/my_module.so|loadmodule /etc/redis/ratelimit.so|g" /etc/redis/redis.conf
+  - sudo service redis-server restart
+
+script:
+  - prove -r t

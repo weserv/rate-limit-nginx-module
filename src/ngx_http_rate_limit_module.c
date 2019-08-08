@@ -69,7 +69,7 @@ static ngx_command_t ngx_http_rate_limit_commands[] = {
 
     { ngx_string("rate_limit_buffer_size"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF |
-      NGX_CONF_TAKE1,
+          NGX_CONF_TAKE1,
       ngx_conf_set_size_slot, NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_rate_limit_loc_conf_t, upstream.buffer_size), NULL },
 
