@@ -27,7 +27,7 @@
 *.so
 *.so.*
 
-### IntelliJ ###
+### CLion ###
 .idea/
 
 ### Test::Nginx ###

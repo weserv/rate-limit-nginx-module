@@ -1,5 +1,7 @@
 # rate-limit-nginx-module
 
+[![CI status](https://github.com/weserv/rate-limit-nginx-module/workflows/CI/badge.svg)](https://github.com/weserv/rate-limit-nginx-module/actions)
+
 A Redis backed rate limit module for Nginx web servers.
 
 This implementation is based on the following [Redis module](https://redis.io/topics/modules-intro):
@@ -12,7 +14,7 @@ Which offers a straightforward implementation of the fairly sophisticated [gener
 
 ## Status
 
-This module is still under early development but is already production ready.
+This module is production ready.
 
 ## Synopsis
 
@@ -64,13 +66,13 @@ location = /quota {
 
 You can install this module manually by recompiling the standard Nginx core as follows:
 
-1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.17.2).
+1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.19.6).
 2. Clone this repository into a newly created directory (for e.g. `./rate-limit-nginx-module`)
 3. Build the nginx source with this module:
 ```bash
-wget https://nginx.org/download/nginx-1.17.2.tar.gz
-tar -xzvf nginx-1.17.2.tar.gz
-cd nginx-1.17.2/
+wget https://nginx.org/download/nginx-1.19.6.tar.gz
+tar -xzvf nginx-1.19.6.tar.gz
+cd nginx-1.19.6/
 
 git clone https://github.com/weserv/rate-limit-nginx-module rate-limit-nginx-module
 
@@ -78,7 +80,7 @@ git clone https://github.com/weserv/rate-limit-nginx-module rate-limit-nginx-mod
 ./configure --prefix=/opt/nginx \
             --add-module=rate-limit-nginx-module/
 
-make -j2
+make -j$(nproc)
 make install
 ```
 
