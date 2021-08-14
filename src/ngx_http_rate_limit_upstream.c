@@ -318,9 +318,7 @@ ngx_http_rate_limit_process_response(ngx_http_request_t *r,
             return;
         }
 
-        if (u->peer.connection->read->ready || u->length == 0) {
-            ngx_http_rate_limit_redis_rev_handler(r, u);
-        }
+        ngx_http_rate_limit_redis_rev_handler(r, u);
     }
 }
 
