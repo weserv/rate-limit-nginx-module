@@ -260,14 +260,14 @@ ngx_http_rate_limit_process_response(ngx_http_request_t *r,
     ngx_http_core_loc_conf_t *clcf;
 
     /* Not necessary, we don't send anything to the client */
-    // u->header_sent = 1;
+    /*u->header_sent = 1;*/
 
     c = r->connection;
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     /* We are always processing a non buffered response */
-    // if (!u->buffering) {
+    /*if (!u->buffering) {*/
 
     /* Input filter is always set */
     /*if (u->input_filter == NULL) {
@@ -283,8 +283,8 @@ ngx_http_rate_limit_process_response(ngx_http_request_t *r,
     u->write_event_handler = ngx_http_rate_limit_dummy_handler;
 
     /* Not needed */
-    // r->limit_rate = 0;
-    // r->limit_rate_set = 1;
+    /*r->limit_rate = 0;
+    r->limit_rate_set = 1;*/
 
     if (u->input_filter_init(u->input_filter_ctx) == NGX_ERROR) {
         ngx_http_rate_limit_finalize_upstream_request(r, u, NGX_ERROR);

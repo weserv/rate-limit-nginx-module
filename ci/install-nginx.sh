@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
+# Exit immediately if a command exits with a non-zero status
+set -e
+
 # Define variables
 version=$NGINX_VERSION
 nginx_tarball=https://nginx.org/download/nginx-$version.tar.gz
-
-# Exit immediately if a command exits with a non-zero status
-set -e
 
 # Make sure the nginx folder exist
 mkdir -p "$HOME/nginx"
