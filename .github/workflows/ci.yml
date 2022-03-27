@@ -8,7 +8,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            nginx-version: 1.21.1
+            nginx-version: 1.21.6
     services:
       redis:
         image: redis

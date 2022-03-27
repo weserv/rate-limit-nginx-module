@@ -66,13 +66,13 @@ location = /quota {
 
 You can install this module manually by recompiling the standard Nginx core as follows:
 
-1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.21.1).
+1. Grab the nginx source code from [nginx.org](http://nginx.org) (this module is tested on version 1.21.6).
 2. Clone this repository into a newly created directory (for e.g. `./rate-limit-nginx-module`)
 3. Build the nginx source with this module:
 ```bash
-wget https://nginx.org/download/nginx-1.21.1.tar.gz
-tar -xzvf nginx-1.21.1.tar.gz
-cd nginx-1.21.1/
+wget https://nginx.org/download/nginx-1.21.6.tar.gz
+tar -xzvf nginx-1.21.6.tar.gz
+cd nginx-1.21.6/
 
 git clone https://github.com/weserv/rate-limit-nginx-module rate-limit-nginx-module
 
