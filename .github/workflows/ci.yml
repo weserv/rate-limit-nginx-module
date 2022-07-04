@@ -8,7 +8,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            nginx-version: 1.21.6
+            nginx-version: 1.23.0
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
