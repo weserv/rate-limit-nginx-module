@@ -66,11 +66,11 @@ X-RateLimit-Reset: 0
         return 200 "200 OK\n";
     }
 --- request eval
-["GET /hit", "GET /hit", "GET /hit", "GET /hit", "GET /hit"]
+['GET /hit', 'GET /hit', 'GET /hit', 'GET /hit', 'GET /hit']
 --- response_headers eval
-["X-RateLimit-Remaining: 3", "X-RateLimit-Remaining: 2", "X-RateLimit-Remaining: 1", "X-RateLimit-Remaining: 0", "Retry-After: 1"]
+['X-RateLimit-Remaining: 3', 'X-RateLimit-Remaining: 2', 'X-RateLimit-Remaining: 1', 'X-RateLimit-Remaining: 0', 'Retry-After: 1']
 --- response_body_like eval
-["200 OK", "200 OK", "200 OK", "200 OK", "429 Too Many Requests"]
+['200 OK', '200 OK', '200 OK', '200 OK', '429 Too Many Requests']
 --- error_code eval
 [200, 200, 200, 200, 429]
 

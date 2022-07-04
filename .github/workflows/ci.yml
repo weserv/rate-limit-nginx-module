@@ -7,15 +7,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             nginx-version: 1.21.6
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
-        volumes:
-          - ${{ github.workspace }}:/workspace
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
@@ -27,15 +20,24 @@ jobs:
           curl -sSL "https://openresty.org/package/pubkey.gpg" | sudo -E apt-key add -
           echo "deb https://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
           sudo apt-get update
-          sudo -E apt-get install -y libtest-nginx-perl
+          sudo -E apt-get install -y libtest-nginx-perl redis-server
       - name: Install nginx
         env:
           NGINX_VERSION: ${{ matrix.nginx-version }}
         run: ci/install-nginx.sh --add-module=${{ github.workspace }}/
       - name: Build Redis rate limiter module
         run: ci/build-rate-limiter.sh
+      - name: Install Redis rate limiter module
+        run: |
+          sudo mkdir -p /usr/lib/redis/modules
+          sudo mv rate-limiter/ratelimit.so /usr/lib/redis/modules/
       - name: Load Redis rate limiter module
-        run: docker exec ${{ job.services.redis.id }} sh -c 'redis-cli MODULE LOAD /workspace/rate-limiter/ratelimit.so'
+        run: |
+          # Redis < 7
+          redis-cli MODULE LOAD /usr/lib/redis/modules/ratelimit.so
+          # Redis >= 7 (due to `enable-module-command no` restriction)
+          # echo "loadmodule /usr/lib/redis/modules/ratelimit.so" | sudo tee -a /etc/redis/redis.conf
+          # sudo service redis-server restart
       - name: Prepare environment
         run: echo "$HOME/nginx/sbin" >> $GITHUB_PATH
       - name: Run integration tests
