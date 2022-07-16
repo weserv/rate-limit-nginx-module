@@ -4,9 +4,8 @@
 set -e
 
 # Define variables
-# TODO(kleisauke): Wait for https://github.com/onsigntv/redis-rate-limiter/pull/4
-branch=time-improvements
-rate_limiter_repo=https://github.com/kleisauke/redis-rate-limiter.git
+branch=master
+rate_limiter_repo=https://github.com/onsigntv/redis-rate-limiter.git
 
 echo "Building redis-rate-limiter from source"
 
