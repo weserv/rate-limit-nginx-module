@@ -8,7 +8,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            nginx-version: 1.23.4
+            nginx-version: 1.25.3
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -22,7 +22,7 @@ jobs:
       - name: Install nginx
         env:
           NGINX_VERSION: ${{ matrix.nginx-version }}
-        run: ci/install-nginx.sh --add-module=${{ github.workspace }}/
+        run: ci/install-nginx.sh --add-module=$GITHUB_WORKSPACE/
       - name: Build Redis rate limiter module
         run: ci/build-rate-limiter.sh
       - name: Install Redis rate limiter module
