@@ -7,7 +7,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             nginx-version: 1.27.1
     steps:
       - uses: actions/checkout@v4
@@ -32,10 +32,10 @@ jobs:
       - name: Load Redis rate limiter module
         run: |
           # Redis < 7
-          redis-cli MODULE LOAD /usr/lib/redis/modules/ratelimit.so
+          # redis-cli MODULE LOAD /usr/lib/redis/modules/ratelimit.so
           # Redis >= 7 (due to `enable-module-command no` restriction)
-          # echo "loadmodule /usr/lib/redis/modules/ratelimit.so" | sudo tee -a /etc/redis/redis.conf
-          # sudo service redis-server restart
+          echo "loadmodule /usr/lib/redis/modules/ratelimit.so" | sudo tee -a /etc/redis/redis.conf
+          sudo service redis-server restart
       - name: Prepare environment
         run: echo "$HOME/nginx/sbin" >> $GITHUB_PATH
       - name: Run integration tests
