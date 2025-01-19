@@ -14,7 +14,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            nginx-version: 1.27.1
+            nginx-version: 1.27.3
 
     steps:
       - name: Checkout repository
