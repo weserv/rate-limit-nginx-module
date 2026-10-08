@@ -2,13 +2,11 @@
 
 [![CI status](https://github.com/weserv/rate-limit-nginx-module/workflows/CI/badge.svg)](https://github.com/weserv/rate-limit-nginx-module/actions)
 
-A Redis backed rate limit module for Nginx web servers.
+A rate limit module for Nginx web servers, backed by a RESP-based key-value store such as Redis, Valkey, or KeyDB.
 
-This implementation is based on the following [Redis module](https://redis.io/topics/modules-intro):
-
-* [redis-rate-limiter](https://github.com/onsigntv/redis-rate-limiter)
-
-Which offers a straightforward implementation of the fairly sophisticated [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm), in 130 lines of C, without external dependencies.
+This implementation is based on the [redis-rate-limiter](https://github.com/onsigntv/redis-rate-limiter) module, which
+provides a straightforward implementation of the fairly sophisticated [generic cell rate algorithm](
+https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm), in 130 lines of C, without external dependencies.
 
 *This module is not distributed with the Nginx source.*
 
@@ -19,10 +17,10 @@ This module is production ready.
 ## Synopsis
 
 ```nginx
-upstream redis {
+upstream valkey {
    server 127.0.0.1:6379;
 
-   # Or: server unix:/var/run/redis/redis.sock;
+   # Or: server unix:/run/valkey/valkey.sock;
 
    # a pool with at most 1024 connections
    keepalive 1024;
@@ -43,26 +41,27 @@ rate_limit_status 429;
 
 location = /limit {
     rate_limit $limit_key requests=15 period=1m burst=20;
-    rate_limit_pass redis;
+    rate_limit_pass valkey;
 }
 
 location = /limit_b {
     rate_limit $limit_key requests=20 period=1m burst=25;
     rate_limit_prefix b;
-    rate_limit_pass redis;
+    rate_limit_pass valkey;
 }
 
 location = /quota {
     rate_limit $limit_key requests=15 period=1m burst=20;
     rate_limit_quantity 0;
-    rate_limit_pass redis;
+    rate_limit_pass valkey;
     rate_limit_headers on;
 }
 ```
 
 ## Installation
 
-*Note: You will need to install the Redis module first, see the install instructions [here](https://github.com/onsigntv/redis-rate-limiter#install).*
+> [!NOTE]
+> You will need to install the [redis-rate-limiter](https://github.com/onsigntv/redis-rate-limiter) module first.
 
 You can install this module manually by recompiling the standard Nginx core as follows:
 
@@ -96,11 +95,11 @@ The following dependencies are required to run the test suite:
 * Nginx modules:
 	* ngx_http_rate_limit_module (i.e., this module)
 
-* Redis modules:
+* Rate limiting module:
     * [redis-rate-limiter](https://github.com/onsigntv/redis-rate-limiter)
 
-* Applications:
-	* redis: listening on the default port, 6379.
+* RESP-compatible backend:
+	* Redis, Valkey, or KeyDB, listening on the default port, 6379.
 
 To run the whole test suite in the default testing mode:
 ```bash
@@ -116,6 +115,5 @@ export PATH=/path/to/your/nginx/sbin:$PATH
 prove -I/path/to/test-nginx/lib t/sanity.t
 ```
 
-To run a specific test block in a particular test file, add the line
-`--- ONLY` to the test block you want to run, and then use the `prove`
-utility to run that `.t` file.
+To run a specific test block in a particular test file, add the line `--- ONLY` to the test block you want to run,
+and then use the `prove` utility to run that `.t` file.

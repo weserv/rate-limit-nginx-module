@@ -27,7 +27,7 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/ubuntu $(lsb_release -sc) main" | \
             sudo tee /etc/apt/sources.list.d/openresty.list > /dev/null
           sudo apt-get update
-          sudo apt-get install --no-install-recommends libtest-nginx-perl redis-server
+          sudo apt-get install --no-install-recommends libtest-nginx-perl valkey-server
 
       - name: Install nginx
         env:
@@ -42,21 +42,18 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Install Redis rate limiter module
+      - name: Install rate limiting module
         working-directory: ${{ runner.temp }}
         run: |
           git clone https://github.com/onsigntv/redis-rate-limiter.git
           cd redis-rate-limiter
           make -j$(nproc) USE_MONOTONIC_CLOCK=1
-          sudo install -D -t /usr/lib/redis/modules ratelimit.so
+          sudo install -D -t /usr/lib/valkey/modules ratelimit.so
 
-      - name: Load Redis rate limiter module
+      - name: Load rate limiting module
         run: |
-          # Redis < 7
-          # redis-cli MODULE LOAD /usr/lib/redis/modules/ratelimit.so
-          # Redis >= 7 (due to `enable-module-command no` restriction)
-          echo "loadmodule /usr/lib/redis/modules/ratelimit.so" | sudo tee -a /etc/redis/redis.conf
-          sudo service redis-server restart
+          echo "loadmodule /usr/lib/valkey/modules/ratelimit.so" | sudo tee -a /etc/valkey/valkey.conf
+          sudo service valkey-server restart
 
       - name: Prepare environment
         run: echo "$HOME/nginx/sbin" >> $GITHUB_PATH

@@ -4,11 +4,11 @@ use Test::Nginx::Socket;
 
 plan tests => repeat_each() * (blocks() * 10 - 2);
 
-$ENV{TEST_NGINX_REDIS_PORT} ||= 6379;
+$ENV{TEST_NGINX_VALKEY_PORT} ||= 6379;
 
 our $HttpConfig = qq{
-    upstream redis {
-       server 127.0.0.1:$ENV{TEST_NGINX_REDIS_PORT};
+    upstream valkey {
+       server 127.0.0.1:$ENV{TEST_NGINX_VALKEY_PORT};
 
        # a pool with at most 1024 connections
        keepalive 1024;
@@ -30,7 +30,7 @@ __DATA__
     location /quota {
         rate_limit $remote_addr requests=700 period=3m burst=699;
         rate_limit_quantity 0;
-        rate_limit_pass redis;
+        rate_limit_pass valkey;
         rate_limit_headers on;
 
         error_page 404 =200 @quota;
@@ -55,7 +55,7 @@ X-RateLimit-Reset: 0
     location /hit {
         rate_limit $remote_addr requests=4 period=5s burst=3;
         rate_limit_prefix a;
-        rate_limit_pass redis;
+        rate_limit_pass valkey;
         rate_limit_headers on;
 
         error_page 404 =200 @hit;
@@ -81,7 +81,7 @@ X-RateLimit-Reset: 0
         rate_limit $remote_addr requests=4 period=5s burst=3;
         rate_limit_prefix b;
         rate_limit_quantity 5;
-        rate_limit_pass redis;
+        rate_limit_pass valkey;
         rate_limit_headers on;
 
         error_page 404 =200 @hit;
